@@ -1,4 +1,4 @@
-(ns cpo-qc.core
+(ns ^:figwheel-hooks cpo-qc.core
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [clojure.set]
             [reagent.core :as r] 
@@ -123,18 +123,16 @@
        :onSelectionChanged #()
        }
       [:> ag-grid/AgGridColumn {:field "library_id" :headerName "Library ID" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :pinned "left" :checkboxSelection false :headerCheckboxSelectionFilteredOnly true :floatingFilter true :sort "desc"}]
-      [:> ag-grid/AgGridColumn {:field "inferred_species_name" :headerName "Inferred Species" :headerTooltip "Inferred Species" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "num_bases_short" :type "numericColumn" :headerName "Megabases Short" :headerTooltip "Megabases from Short Reads" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :cellStyle num-bases-short-style}]
-      [:> ag-grid/AgGridColumn {:field "num_bases_long" :type "numericColumn" :headerName "Megabases Long" :headerTooltip "Megabases from Long Reads":maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "assembly_type" :headerName "Assembly Type" :headerTooltip "Assembly Type" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "assembly_length" :type "numericColumn" :headerName "Assembly Length (Mb)" :headerTooltip "Assembly Length" :maxWidth 220 :sortable true :resizable true :filter "agNumberColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "assembly_num_contigs" :type "numericColumn" :headerName "Num. Contigs" :headerTooltip "Number of Contigs" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "assembly_N50" :type "numericColumn" :headerName "Assembly N50" :headerTooltip "Assembly N50" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "mlst_scheme" :headerName "MLST Scheme" :headerTooltip "MLST Scheme" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "mlst_sequence_type" :headerName "ST" :headerTooltip "MLST Sequence Type" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      
-      ]]
-    ))
+      [:> ag-grid/AgGridColumn {:field "assembly_type" :headerName "Assembly Type" :headerTooltip "Assembly Type" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "inferred_species_name" :headerName "Inferred Species" :headerTooltip "Inferred Species" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "num_bases_short" :type "numericColumn" :headerName "Megabases Short" :headerTooltip "Megabases from Short Reads" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true :cellStyle num-bases-short-style}]
+      [:> ag-grid/AgGridColumn {:field "num_bases_long" :type "numericColumn" :headerName "Megabases Long" :headerTooltip "Megabases from Long Reads":maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]    
+      [:> ag-grid/AgGridColumn {:field "assembly_length" :type "numericColumn" :headerName "Assembly Length (Mb)" :headerTooltip "Assembly Length" :maxWidth 220 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "assembly_num_contigs" :type "numericColumn" :headerName "Num. Contigs" :headerTooltip "Number of Contigs" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "assembly_N50" :type "numericColumn" :headerName "Assembly N50" :headerTooltip "Assembly N50" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "mlst_scheme" :headerName "MLST Scheme" :headerTooltip "MLST Scheme" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "mlst_sequence_type" :headerName "ST" :headerTooltip "MLST Sequence Type" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      ]]))
 
 (defn plasmid-qc-table []
   (let [currently-selected-run-ids (:selected-run-ids @db)
@@ -150,15 +148,16 @@
        :enableCellTextSelection true
        :onFirstDataRendered #(-> % .-api .sizeColumnsToFit)
        }
-      [:> ag-grid/AgGridColumn {:field "library_id" :headerName "Library ID" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :pinned "left" :checkboxSelection false :headerCheckboxSelectionFilteredOnly true}]
-      [:> ag-grid/AgGridColumn {:field "assembly_type" :headerName "Assembly Type" :headerTooltip "Assembly Type" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "mob_suite_primary_cluster_id" :headerName "MOB-Suite Primary" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "mob_suite_secondary_cluster_id" :headerName "MOB-Suite Secondary" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "resistance_gene_name" :headerName "Resistance Gene" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "resistance_gene_identity" :headerName "Gene Identity (%)" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "plasmid_reconstruction_size" :headerName "Plasmid Size" :headerTooltip "Plasmid Reconstruction Size" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "num_contigs_in_plasmid_reconstruction" :headerName "Num. Contigs" :headerTooltip "Num. Contigs in Plasmid Reconstruction" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter"}]
-      [:> ag-grid/AgGridColumn {:field "closest_db_plasmid" :headerName "Closest DB Plasmid" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter"}]
+      [:> ag-grid/AgGridColumn {:field "library_id" :headerName "Library ID" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true :pinned "left" :checkboxSelection false :headerCheckboxSelectionFilteredOnly true}]
+      [:> ag-grid/AgGridColumn {:field "assembly_type" :headerName "Assembly Type" :headerTooltip "Assembly Type" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "mob_suite_primary_cluster_id" :headerName "MOB-Suite Primary" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "mob_suite_secondary_cluster_id" :headerName "MOB-Suite Secondary" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "resistance_gene_name" :headerName "Resistance Gene" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "resistance_gene_identity" :headerName "Gene Identity (%)" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "plasmid_reconstruction_size" :headerName "Plasmid Size" :headerTooltip "Plasmid Reconstruction Size" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "num_contigs_in_plasmid_reconstruction" :headerName "Num. Contigs" :headerTooltip "Num. Contigs in Plasmid Reconstruction" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "closest_db_plasmid" :headerName "Closest DB Plasmid" :maxWidth 200 :sortable true :resizable true :filter "agTextColumnFilter" :floatingFilter true}]
+      [:> ag-grid/AgGridColumn {:field "closest_db_plasmid_breadth_coverage_above_depth_threshold" :headerName "Coverage Above 10x (%)" :maxWidth 200 :sortable true :resizable true :filter "agNumberColumnFilter" :floatingFilter true}]
       
       
       ]]
@@ -191,12 +190,19 @@
                   :grid-row "2"
                   :gap "4px"}}
      [plasmid-qc-table]]]
-   #_[debug-view]
    ])
+
+(defn render []
+  (rdom/render [root]
+            (js/document.getElementById "app")))
+
+(defn ^:after-load re-render []
+  (js/console.log "re-rendering")
+  (render))
 
 (defn main []
   (load-illumina-runs)
-  (rdom/render [root] (js/document.getElementById "app")))
+  (render))
 
 (set! (.-onload js/window) main)
 
