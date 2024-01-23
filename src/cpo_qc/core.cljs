@@ -1,4 +1,4 @@
-(ns ^:figwheel-hooks cpo-qc.core
+(ns cpo-qc.core
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [clojure.set]
             [reagent.core :as r] 
@@ -193,10 +193,9 @@
    ])
 
 (defn render []
-  (rdom/render [root]
-            (js/document.getElementById "app")))
+  (rdom/render [root] (js/document.getElementById "app")))
 
-(defn ^:after-load re-render []
+(defn re-render []
   (js/console.log "re-rendering")
   (render))
 
@@ -204,7 +203,9 @@
   (load-illumina-runs)
   (render))
 
-(set! (.-onload js/window) main)
+(defn ^:export init []
+  (js/console.log "initializing")
+  (set! (.-onload js/window) main))
 
 (comment
 

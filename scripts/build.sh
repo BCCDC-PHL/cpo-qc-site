@@ -1,4 +1,3 @@
 #!/bin/bash
 
-rm -r target/public/cljs-out/prod/*
-clojure -M:fig:build-prod
+shadow-cljs release app

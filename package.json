@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/BCCDC-PHL/cpo-qc-site#readme",
   "devDependencies": {
+    "shadow-cljs": "^2.26.6",
     "webpack": "^5.52.1",
     "webpack-cli": "^4.8.0"
   },
