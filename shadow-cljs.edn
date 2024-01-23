@@ -1,4 +1,5 @@
-{:deps {:aliases [:shadow]}
+{:deps {:aliases [:dev]}
+ :http {:port 9630}
  :dev-http {9500 "resources/public"}
  :builds {:app {:target :browser
                 :output-dir "resources/public/js"
@@ -6,5 +7,5 @@
                 :modules {:main
                           {:init-fn cpo-qc.core/init}}
                 :devtools {:after-load cpo-qc.core/re-render}
-                :build-hooks [(shadow.cljs.build-report/hook {:output-to "build-reports/report.html"})]
-                :release {:compiler-options {:optimizations :simple}}}}}
+                :build-hooks [(shadow.cljs.build-report/hook {:output-to "build-reports/cpo-qc-shadow-build-report.html"})]
+                :release {:compiler-options {:optimizations :advanced}}}}}

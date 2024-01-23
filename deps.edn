@@ -7,5 +7,5 @@
   reagent/reagent {:mvn/version "1.2.0"
                    :exclusion [cljsjs/react cljsjs/react-dom]}}
  :aliases
- {:shadow {:extra-deps {thheller/shadow-cljs {:mvn/version "2.26.6"}}
-           :extra-paths ["dev" "target"]}}}
+ {:dev {:extra-deps {thheller/shadow-cljs {:mvn/version "2.26.6"}}
+        :extra-paths ["dev"]}}}
