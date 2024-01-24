@@ -12,7 +12,8 @@
 
 (defonce db (r/atom {}))
 
-(def app-version "v0.1.0")
+(def app-version "v0.1.1")
+
 
 (defn in? 
   "true if coll contains elem"
@@ -20,27 +21,55 @@
   (some #(= elem %) coll))
 
 
-(defn load-illumina-runs []
-  "Load illumina runs data and store it in the app db."
+(defn incorporate-run
+  "Incorporate a run into a list of runs. If the run is already in the list,
+   Add its analysis type to the existing entry."
+  [acc run]
+  (let [run-id (:run_id run)
+        existing-run (get acc run-id)
+        run-analysis-type (:analysis_type run)
+        run-transformed (-> run
+                            (assoc :analysis_types #{run-analysis-type})
+                            (dissoc :analysis_type))]
+    (if existing-run
+      (update-in acc [run-id :analysis_types] conj run-analysis-type)
+      (assoc acc run-id run-transformed))))
+
+
+(defn de-duplicate-sequencing-runs
+  "De-duplicate sequencing runs by run id."
+  [sequencing-runs]
+  (->> sequencing-runs
+       (reduce incorporate-run {})
+       vals))
+
+
+(defn load-sequencing-runs []
+  "Load sequencing runs data and store it in the app db."
   (go
-    (let [response (<! (http/get "data/illumina_runs.json"))]
-      (swap! db assoc-in [:illumina-runs] (:body response)))))
+    (let [response (<! (http/get "data/sequencing_runs.json"))]
+      (if (= 200 (:status response))
+        (swap! db assoc-in [:sequencing-runs] (de-duplicate-sequencing-runs (:body response)))))))
 
 
 (defn load-library-qc [run-id]
   "Load library qc data for a given run id and store it in the app db."
-  (go
-    (let [response (<! (http/get (str "data/library-qc/" run-id "_library_qc.json")))]
-      (if (= 200 (:status response))
-        (swap! db assoc-in [:library-qc run-id] (:body response))))))
+  (let [analysis-types (:analysis_types (first (filter #(= run-id (:run_id %)) (:sequencing-runs @db))))]
+    (doseq [analysis-type analysis-types]
+      (go
+        (let [response (<! (http/get (str "data/library-qc/" run-id "_" analysis-type "_library_qc.json")))]
+          (if (= 200 (:status response))
+            (swap! db assoc-in [:library-qc run-id analysis-type] (:body response))))))))
 
 
 (defn load-plasmid-qc [run-id]
   "Load plasmid qc data for a given run id and store it in the app db."
-  (go
-    (let [response (<! (http/get (str "data/plasmid-qc/" run-id "_plasmid_qc.json")))]
-      (if (= 200 (:status response))
-        (swap! db assoc-in [:plasmid-qc run-id] (:body response))))))
+  (let [analysis-types (:analysis_types (first (filter #(= run-id (:run_id %)) (:sequencing-runs @db))))]
+    (doseq [analysis-type analysis-types]
+      (go
+        (let [response (<! (http/get (str "data/plasmid-qc/" run-id "_" analysis-type "_plasmid_qc.json")))]
+          (if (= 200 (:status response))
+            (swap! db assoc-in [:plasmid-qc run-id analysis-type] (:body response))))))))
 
 
 (defn get-selected-rows
@@ -58,8 +87,8 @@
   (let [previously-selected-run-ids (:selected-run-ids @db)
         currently-selected-run-ids (map :run_id (get-selected-rows e))
         newly-selected-run-ids (clojure.set/difference (set currently-selected-run-ids) (set previously-selected-run-ids))
-        currently-selected-runs (filter #(in? currently-selected-run-ids (:run_id %)) (:runs @db))
-        newly-selected-runs (filter #(in? newly-selected-run-ids (:run_id %)) (:runs @db))]
+        currently-selected-runs (filter #(in? currently-selected-run-ids (:run_id %)) (:sequencing-runs @db))
+        newly-selected-runs (filter #(in? newly-selected-run-ids (:run_id %)) (:sequencing-runs @db))]
     (do
       (doall
        (map load-library-qc newly-selected-run-ids))
@@ -83,10 +112,10 @@
     [:img {:src "images/bccdc_logo.svg" :height "48px"}]]])
 
 
-(defn illumina-runs-table
-  "Illumina runs table component."
+(defn sequencing-runs-table
+  "Sequencing runs table component."
   []
-  (let [runs (:illumina-runs @db)
+  (let [runs (:sequencing-runs @db)
         row-data runs]
     [:div {:class "ag-theme-balham"
            :style {}}
@@ -107,6 +136,7 @@
                                 :checkboxSelection true
                                 :headerCheckboxSelection true
                                 :headerCheckboxSelectionFilteredOnly true
+                                :isRowSelectable true
                                 :sort "desc"}]]]))
 
 
@@ -115,10 +145,11 @@
   []
   (let [currently-selected-run-ids (:selected-run-ids @db)
         all-library-qc (:library-qc @db)
-        selected-runs-library-qc (flatten (vals (select-keys all-library-qc currently-selected-run-ids)))
+        selected-runs-library-qc (flatten (map vals (vals (select-keys all-library-qc currently-selected-run-ids))))
         num-bases-short-style (fn [params] (if (> 500 (. params -value)) (clj->js {:backgroundColor "#e6675e"}) nil))
         row-data (->> selected-runs-library-qc
                       (map (fn [x] (update x :num_bases_short #(.toFixed (/ % 1000000 ) 2))))
+                      (map (fn [x] (update x :num_bases_long #(.toFixed (/ % 1000000 ) 2))))
                       (map (fn [x] (update x :assembly_length #(.toFixed (/ % 1000000 ) 2)))))]
     [:div {:class "ag-theme-balham"
            :style {}}
@@ -224,7 +255,7 @@
   []
   (let [currently-selected-run-ids (:selected-run-ids @db)
         all-plasmid-qc (:plasmid-qc @db)
-        selected-runs-plasmid-qc (flatten (vals (select-keys all-plasmid-qc currently-selected-run-ids)))
+        selected-runs-plasmid-qc (flatten (map vals (vals (select-keys all-plasmid-qc currently-selected-run-ids))))
         row-data (->> selected-runs-plasmid-qc
                       identity)]
     [:div {:class "ag-theme-balham"
@@ -329,7 +360,7 @@
     [:div {:style {:display "grid"
                    :grid-column "1"
                    :grid-row "1 / 3"}}
-     [illumina-runs-table]]
+     [sequencing-runs-table]]
     [:div {:style {:display "grid"
                   :grid-column "2"
                   :grid-row "1"
@@ -349,7 +380,7 @@
   (render))
 
 (defn main []
-  (load-illumina-runs)
+  (load-sequencing-runs)
   (render))
 
 (defn ^:export init []
