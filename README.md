@@ -20,7 +20,7 @@ After cloning this repository, run `npm install` from the top-level of the repo 
 M-x package-install RET cider RET
 ```
 
-Once CIDER has been installed, open the [src/covid_qc/core.cljs](src/covid_qc/core.cljs) file in Emacs. Then, start a CIDER REPL by running:
+Once CIDER has been installed, open the [src/cpo_qc/core.cljs](src/cpo_qc/core.cljs) file in Emacs. Then, start a CIDER REPL by running:
 
 ```
 M-x cider-jack-in-cljs
@@ -51,7 +51,7 @@ The expression is automatically compiled to JavaScript and evaluated in the brow
 ### VS Code - Calva
 [Calva](https://calva.io/) is a clojure(script) development environment for [VS Code](https://code.visualstudio.com/). Search for `calva` in the VS Code Extensions marketplace to install it.
 
-Open the `covid-qc` folder in VS Code. Open the VS Code Command Palette (`Ctrl-Shift-P`), and search for `calva`:
+Open the `cpo-qc` folder in VS Code. Open the VS Code Command Palette (`Ctrl-Shift-P`), and search for `calva`:
 
 ![vscode-command-palette-calva-start](doc/images/vscode-command-palette-calva-start.png)
 
