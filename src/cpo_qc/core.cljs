@@ -10,9 +10,11 @@
             [ag-charts-react :as ag-chart]
             [cljs.pprint :refer [pprint]]))
 
+
 (defonce db (r/atom {}))
 
-(def app-version "v0.1.1")
+
+(def app-version "v0.1.2")
 
 
 (defn in? 
@@ -44,16 +46,36 @@
        vals))
 
 
-(defn load-sequencing-runs []
+(defn load-qc-thresholds
+  "Load qc thresholds data and store it in the app db."
+  []
+  (go
+    (let [response (<! (http/get "data/qc_thresholds.json"))]
+      (if (= 200 (:status response))
+        (swap! db assoc-in [:qc-thresholds] (:body response))))))
+
+
+(defn load-mlst-scheme-species-name-lookup
+  "Load mlst scheme species name lookup data and store it in the app db."
+  []
+  (go
+    (let [response (<! (http/get "data/mlst_scheme_species_name_lookup.json"))]
+      (if (= 200 (:status response))
+        (swap! db assoc-in [:species-name-by-mlst-scheme] (:body response))))))
+
+
+(defn load-sequencing-runs
   "Load sequencing runs data and store it in the app db."
+  []
   (go
     (let [response (<! (http/get "data/sequencing_runs.json"))]
       (if (= 200 (:status response))
         (swap! db assoc-in [:sequencing-runs] (de-duplicate-sequencing-runs (:body response)))))))
 
 
-(defn load-library-qc [run-id]
+(defn load-library-qc 
   "Load library qc data for a given run id and store it in the app db."
+  [run-id]
   (let [analysis-types (:analysis_types (first (filter #(= run-id (:run_id %)) (:sequencing-runs @db))))]
     (doseq [analysis-type analysis-types]
       (go
@@ -62,8 +84,9 @@
             (swap! db assoc-in [:library-qc run-id analysis-type] (:body response))))))))
 
 
-(defn load-plasmid-qc [run-id]
+(defn load-plasmid-qc
   "Load plasmid qc data for a given run id and store it in the app db."
+  [run-id]
   (let [analysis-types (:analysis_types (first (filter #(= run-id (:run_id %)) (:sequencing-runs @db))))]
     (doseq [analysis-type analysis-types]
       (go
@@ -146,8 +169,17 @@
   (let [currently-selected-run-ids (:selected-run-ids @db)
         all-library-qc (:library-qc @db)
         selected-runs-library-qc (flatten (map vals (vals (select-keys all-library-qc currently-selected-run-ids))))
-        num-bases-short-style (fn [params] (if (> 500 (. params -value)) (clj->js {:backgroundColor "#e6675e"}) nil))
+        min-megabases-short (get-in @db [:qc-thresholds :min_megabases_short] 50)
+        megabases-short-style (fn [params]
+                                (if (> min-megabases-short (. params -value))
+                                  (clj->js {:backgroundColor "#e6675e"}) nil))
+        min-assembly-n50 (get-in @db [:qc-thresholds :min_assembly_n50] 10000)
+        assembly-n50-style (fn [params]
+                             (if (> min-assembly-n50 (. params -value))
+                               (clj->js {:backgroundColor "#e6675e"}) nil))
+        species-name-by-mlst-scheme (get @db :species-name-by-mlst-scheme {})
         row-data (->> selected-runs-library-qc
+                      (map (fn [x] (assoc x :inferred_species_name (get species-name-by-mlst-scheme (keyword (:mlst_scheme x))))))
                       (map (fn [x] (update x :num_bases_short #(.toFixed (/ % 1000000 ) 2))))
                       (map (fn [x] (update x :num_bases_long #(.toFixed (/ % 1000000 ) 2))))
                       (map (fn [x] (update x :assembly_length #(.toFixed (/ % 1000000 ) 2)))))]
@@ -195,7 +227,7 @@
                                 :resizable true
                                 :filter "agNumberColumnFilter"
                                 :floatingFilter true
-                                :cellStyle num-bases-short-style}]
+                                :cellStyle megabases-short-style}]
       [:> ag-grid/AgGridColumn {:field "num_bases_long"
                                 :type "numericColumn"
                                 :headerName "Megabases Long"
@@ -231,7 +263,8 @@
                                 :sortable true
                                 :resizable true
                                 :filter "agNumberColumnFilter"
-                                :floatingFilter true}]
+                                :floatingFilter true
+                                :cellStyle assembly-n50-style}]
       [:> ag-grid/AgGridColumn {:field "mlst_scheme"
                                 :headerName "MLST Scheme"
                                 :headerTooltip "MLST Scheme"
@@ -380,6 +413,8 @@
   (render))
 
 (defn main []
+  (load-qc-thresholds)
+  (load-mlst-scheme-species-name-lookup)
   (load-sequencing-runs)
   (render))
 
